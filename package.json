@@ -1,0 +1,24 @@
+{
+  "name": "iskljucenja",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "private": true,
+  "dependencies": {
+    "@ngrok/ngrok": "^1.6.0",
+    "better-sqlite3": "^12.5.0",
+    "cheerio": "^1.1.2",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "js-beautify": "^1.15.4",
+    "pino": "^10.1.0",
+    "viber-bot": "^1.0.18"
+  },
+  "devDependencies": {
+    "pino-pretty": "^13.1.2"
+  },
+  "type": "module"
+}
