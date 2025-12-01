@@ -105,9 +105,8 @@ const main = async () => {
     await notify(outages1h, 1);
 };
 
-const expression = '* * * * *';
 if (!isTestDryRun)
-    cronSchedule(expression, async () => await main());
+    await main();
 else {
     const expression = '* * * * *';
     logger.info({
