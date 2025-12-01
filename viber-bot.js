@@ -3,6 +3,9 @@ import "dotenv/config";
 import express from "express";
 import { logger } from "./src/logger.js";
 import { getWebhookUrl } from "./src/webhook-url.js";
+import { createServer as createUnsecureServer } from 'http';
+import { createServer as createSecureServer } from 'https';
+import { readFile } from "fs/promises";
 
 const app = express();
 app.use(express.json());
@@ -141,7 +144,7 @@ async function setWebhook(webhookUrl) {
 const PORT = process.env.PORT || 3000;
 const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
 
-const server = app.listen(PORT, async () => {
+const serverListenerHandler = async () => {
     logger.info({
         msg: "Viber channel webhook server started",
         port: PORT,
@@ -165,7 +168,16 @@ const server = app.listen(PORT, async () => {
         });
         process.exit(1);
     }
-});
+};
+
+let server = IS_DEVELOPMENT ?
+    createUnsecureServer(app) :
+    createSecureServer(app, {
+        key: readFile(process.env.SSL_KEY_PATH),
+        cert: readFile(process.env.SSL_CERT_PATH),
+    });
+
+server.listen(PORT || 443, serverListenerHandler);
 
 const shutdown = async () => {
     logger.info("Shutting down gracefully");
