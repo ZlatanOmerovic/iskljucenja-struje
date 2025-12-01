@@ -170,14 +170,20 @@ const serverListenerHandler = async () => {
     }
 };
 
-let server = IS_DEVELOPMENT ?
-    createUnsecureServer(app) :
-    createSecureServer(app, {
-        key: readFile(process.env.SSL_KEY_PATH),
-        cert: readFile(process.env.SSL_CERT_PATH),
-    });
+let server = null;
 
-server.listen(PORT || 443, serverListenerHandler);
+if (IS_DEVELOPMENT) {
+    server = createUnsecureServer(serverListenerHandler);
+} else {
+    const [key, cert] = await Promise.all([
+        readFile(process.env.SSL_KEY_PATH),
+        readFile(process.env.SSL_CERT_PATH),
+    ]);
+
+    server = createSecureServer({ key, cert }, app);
+}
+
+server.listen(PORT || 443, '0.0.0.0', serverListenerHandler);
 
 const shutdown = async () => {
     logger.info("Shutting down gracefully");
