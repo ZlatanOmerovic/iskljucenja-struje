@@ -3,6 +3,11 @@ import "dotenv/config";
 import { getOutagesWithinTimeframe, markAsNotified1h, markAsNotified24h } from "./src/sqlite.js";
 import { locationsOfInterest } from "./locations.js";
 import { postToChannel } from "./src/viber.js";
+import { schedule as cronSchedule } from 'node-cron';
+import {logger} from "./src/logger.js";
+
+const IS_DEVELOPMENT = process.env.NODE_ENV === "development";
+let isTestDryRun = (['--test', '--dry-run', '-t', '-d'].includes(process.argv[2])) && IS_DEVELOPMENT;
 
 const notify = async (outages, type = 24) => {
     const grouping = {};
@@ -23,6 +28,9 @@ const notify = async (outages, type = 24) => {
             start_time: outage.start_time,
             end_time: outage.end_time,
         });
+
+        if (isTestDryRun)
+            continue;
 
         if (type === 24)
             markAsNotified24h(outage.id);
@@ -66,8 +74,8 @@ const notify = async (outages, type = 24) => {
         const message =
             label +
             `🗓️ Datum: ${date}\n\n` +
-            `⏱️ Početak: ${startTime}h\n` +
-            `🕡️ Kraj: ${endTime}h\n\n` +
+            `⏱️ Isključenje: u ${startTime}h\n` +
+            `🕡️ Uključenje: u ${endTime}h\n\n` +
             `🏠 Mjesta i naselja (${locations.length}):\n\n` +
             `${locations.join("\n")}\n`;
 
@@ -75,14 +83,36 @@ const notify = async (outages, type = 24) => {
     }
 
     for(const message of messages) {
+        if (isTestDryRun) {
+            logger.info({
+                msg: "Message test",
+                message,
+            });
+            continue;
+        }
+
         await postToChannel(message);
     }
 }
 
-const targetLocations = locationsOfInterest;
+const main = async () => {
+    const targetLocations = locationsOfInterest;
 
-const outages24h = getOutagesWithinTimeframe(24, 1, targetLocations);
-const outages1h = getOutagesWithinTimeframe(1, 0, targetLocations);
+    const outages24h = getOutagesWithinTimeframe(24, 1, targetLocations);
+    const outages1h = getOutagesWithinTimeframe(1, 0, targetLocations);
 
-await notify(outages24h, 24);
-await notify(outages1h, 1);
+    await notify(outages24h, 24);
+    await notify(outages1h, 1);
+};
+
+const expression = '* * * * *';
+if (!isTestDryRun)
+    cronSchedule(expression, async () => await main());
+else {
+    const expression = '* * * * *';
+    logger.info({
+        msg: "Running node-cron for testing purposes...",
+        expression
+    });
+    cronSchedule(expression, async () => await main());
+}
